@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lab</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="../css/Style.css" rel="stylesheet">
+    <script type="text/javascript" src="../js/GetDataForControllers.js"></script>
+    <script type="text/javascript" src="../js/main.js"></script>
+</head>
+<body>
+    
+    <header class="header">
+        <div class="container">
+        </div>
+    </header>
+    <div class="container">
+        <a href="create.html" class="btn btn-primary">Создать запись</a>
+        <h2>Список фильмов</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Название</th>
+                    <th>Жанр</th>
+                    <th>Длительность</th>
+                    <th>Компания-производитель</th>
+                    <th>Страна-производитель</th>
+                    <th>Возраст</th>
+                    <th>Описание</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <footer class="footer">
+        <div class="container">
+        </div>
+    </footer>
+    <script>
+		window.onload = function () {
+			GetAllFilms();
+		}
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Create</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="../css/Style.css" rel="stylesheet">
+    <script type="text/javascript" src="../js/GetDataForControllers.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-5">
+                <h3>Добавление фильма</h3>
+                <hr />
+                <form name="filmForm">
+                    <input type="hidden" name="id" value="0"/>
+                    <div class="form-floating mb-2">
+                        Название: <input asp-for="Name" class="form-control" name="name" />
+                    </div>
+                    <div class="form-floating mb-2">
+                        Жанр: <select asp-for="GenreId" class="form-control" name="genre"></select>
+                    </div>
+                    <div class="form-floating mb-2">
+                        Длительность: <input asp-for="Duration" class="form-control" name="duration" />
+                    </div>
+                    <div class="form-floating mb-3">
+                        Компания-производитель: <select asp-for="FilmProductionId" class="form-control" name="filmProduction"></select>
+                    </div>
+                    <div class="form-floating mb-2">
+                        Страна-производитель: <select asp-for="CountryProductionId" class="form-control" name="countryProduction"></select>
+                    </div>
+                    <div class="form-floating mb-2">
+                        Возраст: <input asp-for="AgeLimit" class="form-control" name="ageLimit" />
+                    </div>
+                    <div class="form-floating mb-2">
+                        Описание: <input asp-for="Description" class="form-control" name="description" />
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="submit" id="submit" value="Создать" class="btn btn-secondary" />
+                        <a href="index.html" class="btn btn-primary">Вернуться назад</a>
+                        <input type="reset" value="Сбросить" class="btn btn-primary">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+		//Функция, которая активируется при загрузке страницы html
+		window.onload = function () {
+			GetAllGenres();
+			GetAllCountryProductions();
+			GetAllFilmProduction();
+		}
+
+        //Функция создания новой записи о фильме
+		async function CreateFilm(name, genreId, duration, filmProductionId, countryProductionId, ageLimit, description) {
+			const response = await fetch("/api/films", {
+                method: "POST",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+
+                    name: name,
+                    genreId: parseInt(genreId, 10),
+                    duration: parseInt(duration, 10),
+                    filmProductionId: parseInt(filmProductionId, 10),
+                    countryProductionId: parseInt(countryProductionId, 10),
+                    ageLimit: parseInt(ageLimit, 10),
+					description: description
+
+                })
+            });
+            if (response.ok === true) {
+                const film = await response.json();
+                alert("Запись была успешно создана");
+                window.location = "index.html";
+            }
+			else {
+                alert("Ошибка в данных");
+			}
+        }
+
+		document.forms["filmForm"].addEventListener("submit", e => {
+			e.preventDefault();
+			const form = document.forms["filmForm"];
+
+			const name = form.elements["name"].value;
+            
+			const genreId = form.elements["genre"].value;
+			const duration = form.elements["duration"].value;
+            const filmProductionId = form.elements["filmProduction"].value;
+            const countryProductionId = form.elements["countryProduction"].value;
+			const ageLimit = form.elements["ageLimit"].value;
+			const description = form.elements["description"].value;
+			
+			CreateFilm(name, genreId, duration, filmProductionId, countryProductionId, ageLimit, description);
+		});
+    </script>
+</body>
+</html>

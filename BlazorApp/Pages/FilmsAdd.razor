@@ -1,0 +1,238 @@
+﻿@page "/films/add"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text
+@using Blazored.LocalStorage;
+@inject Blazored.LocalStorage.ILocalStorageService localStore
+@inject IHttpClientFactory ClientFactory
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+<h3>Добавление фильма</h3>
+@if(genres == null || filmProductions == null || countryProductions == null)
+{
+    <p>Loading..</p>
+}
+else
+{
+    <label>Название:<input type="text" @bind="name" /></label>
+    <label>Длительность:<input type="number" @bind="duration" /></label>
+    <label>Возр.огр:<input type="number" @bind="ageLimit" /></label>
+    <label>Описание:<input type="text" @bind="description" /></label>
+    <label>
+        Жанр:
+        <select @bind="@selectedGenre">
+            <option>""</option>
+            @foreach (var item in genres)
+            {
+               <option value=@item.id>@item.name</option>
+            }
+        </select>
+    </label>
+
+    <label>
+        Компания:
+        <select @bind="@selectedFilmProductions">
+            <option>""</option>
+            @foreach (var item in filmProductions)
+            {
+               <option value=@item.id>@item.name</option>
+            }
+        </select>
+    </label>
+
+    <label>
+        Страна:
+        <select @bind="@selectedCountryProductions">
+            <option>""</option>
+            @foreach (var item in countryProductions)
+            {
+               <option value=@item.id>@item.name</option>
+            }
+        </select>
+    </label>
+
+    <button @onclick="Add">Добавить</button>
+}
+
+@code {
+    public string name { get; set; } = "";
+    public int duration { get; set; } = 0;
+    public int ageLimit { get; set; } = 1;
+    public string description { get; set; } = "";
+
+    public List<Genres> genres { get; set; } = new List<Genres>();
+    public List<FilmProductions> filmProductions { get; set; } = new List<FilmProductions>();
+    public List<CountryProductions> countryProductions { get; set; } = new List<CountryProductions>();
+
+    public string selectedGenre { get; set; } = "";
+    public string selectedFilmProductions { get; set; } = "";
+    public string selectedCountryProductions { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.genres = await this.getGenres();
+        this.filmProductions = await this.getFilmProductions();
+        this.countryProductions = await this.getCountryProductions();
+    }
+
+    public async Task Add()
+    {
+        if (name.Length == 0 && duration == 0 && ageLimit < 1 && description.Length == 0 && selectedGenre.Length == 0 && selectedFilmProductions.Length == 0 && selectedCountryProductions.Length == 0)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Ошибка!");
+            return;
+        }
+        else
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, $"https://localhost:7063/api/Films/");
+
+            var postBody = new
+            {
+                name = name,
+                genreId = selectedGenre,
+                duration = duration,
+                filmProductionId = selectedFilmProductions,
+                countryProductionId = selectedCountryProductions,
+                ageLimit = ageLimit,
+                description = description
+            };
+            request.Content = new StringContent(JsonSerializer.Serialize(postBody), Encoding.UTF8, "application/json");
+
+            var client = ClientFactory.CreateClient();
+
+            var response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                NavManager.NavigateTo("/films");
+            }
+        }
+    }
+
+    private async Task<List<Genres>> getGenres()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/Genres");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        List<Genres>? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <List<Genres>>(responseStream);
+        }
+        else
+        {
+            NavManager.NavigateTo("/signin");
+        }
+        return temp;
+    }
+
+    private async Task<List<CountryProductions>> getCountryProductions()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/CountryProductions");
+
+        var client = ClientFactory.CreateClient();
+
+        var token = await localStore.GetItemAsync<string>("token");
+        if (token != null)
+        {
+            request.Headers.Add("Authorization", token);
+        }
+
+        var response = await client.SendAsync(request);
+        List<CountryProductions>? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <List<CountryProductions>>(responseStream);
+        }
+        else
+        {
+            NavManager.NavigateTo("/signin");
+        }
+        return temp;
+    }
+
+    private async Task<List<FilmProductions>> getFilmProductions()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/FilmProductions");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        List<FilmProductions>? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <List<FilmProductions>>(responseStream);
+        }
+        else
+        {
+            NavManager.NavigateTo("/signin");
+        }
+        return temp;
+    }
+
+    public class Film
+    {
+        public int id { get; set; }
+
+        public string name { get; set; }
+
+        public int genreId { get; set; }
+
+        public int duration { get; set; }
+
+        public int filmProductionId { get; set; }
+
+        public int countryProductionId { get; set; }
+
+        public int ageLimit { get; set; }
+
+        public string description { get; set; }
+
+        //[JsonIgnore]
+        public virtual CountryProductions? countryProduction { get; set; }
+
+        //[JsonIgnore]
+        public virtual FilmProductions? filmProduction { get; set; }
+
+        //[JsonIgnore]
+        public virtual Genres? genre { get; set; }
+    }
+
+    public class CountryProductions
+    {
+        public int id { get; set; }
+
+        public string? name { get; set; }
+
+        public virtual ICollection<Films> Films { get; set; } = new List<Films>();
+    }
+
+    public class FilmProductions
+    {
+        public int id { get; set; }
+
+        public string name { get; set; } = null!;
+
+        public virtual ICollection<Films> Films { get; } = new List<Films>();
+    }
+
+    public partial class Genres
+    {
+        public int id { get; set; }
+
+        public string name { get; set; } = null!;
+
+        public virtual ICollection<Films> Films { get; } = new List<Films>();
+    }
+}

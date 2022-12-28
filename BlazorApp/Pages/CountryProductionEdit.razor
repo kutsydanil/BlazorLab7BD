@@ -1,0 +1,68 @@
+﻿@page "/countryproduction/{id}/"
+@using System.Text.Json
+@using System.Text
+@using System.Text.Json.Serialization
+@inject IHttpClientFactory ClientFactory
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+@if(country == null)
+{
+    <p>Загрузка...</p>
+}
+else
+{
+    <h3>Изменение страны-производителя</h3>
+    <input type="number" @bind="country.id"  readonly/>
+    <label>Название:<input type="text" @bind="country.name" /></label>
+    <button @onclick="UpdateCountry">Сохранить</button>
+}
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    public Country? country { get; set; } = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.country = await this.getData();
+    }
+
+    public async Task UpdateCountry()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, $"https://localhost:7063/api/CountryProductions/");
+        var postBody = new { Id = this.country.id, Name = this.country.name };
+        request.Content = new StringContent(JsonSerializer.Serialize(postBody), Encoding.UTF8, "application/json");
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            NavManager.NavigateTo("/countryproduction");
+        }
+    }
+
+    private async Task<Country> getData()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/CountryProductions/{this.id}");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        Country? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <Country>(responseStream);
+        }
+        return temp;
+    }
+
+    public class Country
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+    }
+}

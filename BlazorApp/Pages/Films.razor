@@ -1,0 +1,155 @@
+﻿@page "/films"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Blazored.LocalStorage;
+@inject Blazored.LocalStorage.ILocalStorageService localStore
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager NavManager
+
+<h3>Фильмы</h3>
+<a href="films/add"><button>Добавить</button></a>
+@if (films == null)
+{
+    <p>Нет данных в базе</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Название</th>
+                <th>Длительность</th>
+                <th>Возр.огр</th>
+                <th>Описание</th>
+                <th>Жанр</th>
+                <th>Компания</th>
+                <th>Страна</th>
+                <th>Изменить</th>
+                <th>Удалить</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var film in films)
+            {
+                <tr>
+                    <td>@film.id</td>
+                    <td>@film.name</td>
+                    <td>@film.duration</td>
+                    <td>@film.ageLimit</td>
+                    <td>@film.description</td>
+                    <td>@film.genre.name</td>
+                    <td>@film.filmProduction.name</td>
+                    <td>@film.countryProduction.name</td>
+                    <td><a href="/films/@film.id/"><button>Изменить</button></a></td>
+                    <td><button @onclick="() => Delete(film.id)">Удалить</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    public List<Film> films { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.films = await this.getData();
+    }
+
+    public async Task Delete(int id)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"https://localhost:7063/api/Films/{id}");
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            this.films = await this.getData();
+        }
+    }
+
+    private async Task<List<Film>> getData()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/Films");
+
+        var client = ClientFactory.CreateClient();
+
+        var token = await localStore.GetItemAsync<string>("token");
+        if (token != null)
+        {
+            request.Headers.Add("Authorization", token);
+        }
+
+        var response = await client.SendAsync(request);
+        List<Film>? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <List<Film>>(responseStream);
+        }
+        else
+        {
+            NavManager.NavigateTo("/signin");
+        }
+        return temp;
+    }
+
+
+    public class Film
+    {
+        public int id { get; set; }
+
+        public string name { get; set; }
+
+        public int genreId { get; set; }
+
+        public int duration { get; set; }
+
+        public int filmProductionId { get; set; }
+
+        public int countryProductionId { get; set; }
+
+        public int ageLimit { get; set; }
+
+        public string description { get; set; }
+
+        //[JsonIgnore]
+        public virtual CountryProductions? countryProduction { get; set; }
+
+        //[JsonIgnore]
+        public virtual FilmProductions? filmProduction { get; set; }
+
+        //[JsonIgnore]
+        public virtual Genres? genre { get; set; }
+    }
+
+    public class CountryProductions
+    {
+        public int Id { get; set; }
+
+        public string? name { get; set; }
+
+        public virtual ICollection<Films> Films { get; set; } = new List<Films>();
+    }
+
+    public class FilmProductions
+    {
+        public int Id { get; set; }
+
+        public string name { get; set; } = null!;
+
+        public virtual ICollection<Films> Films { get; } = new List<Films>();
+    }
+
+    public partial class Genres
+    {
+        public int Id { get; set; }
+
+        public string name { get; set; } = null!;
+
+        public virtual ICollection<Films> Films { get; } = new List<Films>();
+    }
+}

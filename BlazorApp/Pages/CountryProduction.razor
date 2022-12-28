@@ -1,0 +1,94 @@
+﻿@page "/countryproduction"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Blazored.LocalStorage;
+@inject Blazored.LocalStorage.ILocalStorageService localStore
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager NavManager
+
+<h3>Страны-производители</h3>
+<a href="countryproduction/add"><button>Добавить</button></a>
+@if (countryData == null)
+{
+    <p>Нет данных в базе</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Название</th>
+                <th>Изменить</th>
+                <th>Удалить</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var country in countryData)
+            {
+                <tr>
+                    <td>@country.id</td>
+                    <td>@country.name</td>
+                    <td><a href="/countryproduction/@country.id/"><button>Изменить</button></a></td>
+                    <td><button @onclick="() => Delete(country.id)">Удалить</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    private List<Country> countryData { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.countryData = await this.getData();
+    }
+
+    public async Task Delete(int id)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"https://localhost:7063/api/CountryProductions/{id}");
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            this.countryData = await this.getData();
+        }
+    }
+
+    private async Task<List<Country>> getData()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://localhost:7063/api/CountryProductions");
+
+        var client = ClientFactory.CreateClient();
+
+        var token = await localStore.GetItemAsync<string>("token");
+        if (token != null)
+        {
+            request.Headers.Add("Authorization", token);
+        }
+
+        var response = await client.SendAsync(request);
+        List<Country>? temp = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            temp = await JsonSerializer.DeserializeAsync
+                <List<Country>>(responseStream);
+        }
+        else
+        {
+            NavManager.NavigateTo("/signin");
+        }
+        return temp;
+    }
+
+    public class Country
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+    }
+}

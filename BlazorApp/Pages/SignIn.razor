@@ -1,0 +1,52 @@
+﻿@page "/signin"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text
+@using Blazored.LocalStorage;
+@inject Blazored.LocalStorage.ILocalStorageService localStore
+@inject IHttpClientFactory ClientFactory
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+<h3>Авторизация</h3>
+<input type="text" @bind="Login" />
+<input type="password" @bind="Password" />
+<button @onclick="signIn">Войти</button>
+<a href="signup">Регистрация</a>
+
+@code {
+    public string apiURL = $"https://localhost:7063/api/User/SignIn";
+
+
+    public string Login { get; set; }
+    public string Password { get; set; }
+
+    public async Task signIn()
+    {
+        if(Login.Length == 0 || Password.Length == 0)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Ошибка!");
+            return;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, apiURL);
+
+        var postBody = new { Login = Login, Password = Password };
+        request.Content = new StringContent(JsonSerializer.Serialize(postBody), Encoding.UTF8, "application/json");
+
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            var res = await response.Content.ReadAsStringAsync();
+            await localStore.SetItemAsync("token", res);
+            NavManager.NavigateTo("/countryproduction");
+        }
+        else
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Неверные данные входа!");
+            return;
+        }
+    }
+}
